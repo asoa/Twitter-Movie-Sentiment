@@ -1,0 +1,11 @@
+full_tweets_api_sandbox:
+  account_type: premium
+  endpoint: https://api.twitter.com/1.1/tweets/search/fullarchive/python2.json
+  consumer_key: <replace_me>
+  consumer_secret: <replace_me>
+
+search_tweets_api:
+  account_type: premium
+  endpoint: https://api.twitter.com/1.1/tweets/search/30day/python1.json
+  consumer_key: <replace_me>
+  consumer_secret: <replace_me>

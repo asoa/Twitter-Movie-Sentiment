@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+     <head>
+<!-- Include Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script></head>
+<head>
+    <style type="text/css">
+		body{
+		background-image: url('/static/CaptainMarvel.jpg');
+		background-size: 100%;
+		}
+        .header{
+            text-align: center;
+			color:white;
+            background-color: #3B6AA0;
+            height: 70px;
+            line-height: 70px;
+        }
+        .chart{
+            margin-top: 0px;
+			margin-left: auto;
+			margin-right: auto;
+			height: 500px;
+			width: 500px;
+            text-align: center;
+			align: center;
+        }
+		.placeSelection{
+			margin-top: 0px;
+			margin-left: auto;
+			margin-right: auto;
+			text-align: center;
+			align: center;
+		}
+		.dropbtn {
+		  background-color: #98A3AF;
+		  text-align: center;
+		  color: white;
+		  padding: 12px;
+		  font-size: 12px;
+		  border: none;
+		  border-radius: 8px;
+		  cursor: pointer;
+		}
+		.btn {
+		  background-color: #98A3AF;
+		  align: center;
+		  color: white;
+		  padding: 12px;
+		  font-size: 12px;
+		  border: none;
+		  border-radius: 8px;
+		  cursor: pointer;
+		}
+		.btn:hover {background-color: #ADACAC}
+		.dropbtn:hover {background-color: #ADACAC}
+
+    </style>
+</head>
+
+<body>
+ 
+    <div class="header">
+        <h2>
+            Sentiment Analysis Result
+        </h2>
+    </div>
+ <form class="placeSelection" method="POST" action="/submitted">  
+   <select  name=countries method ="GET" action="/" class="dropbtn">
+   <option class= "dropdown-content" selected>Show all</option>
+		{% for country in countries %}
+			<option class= "dropdown-content" value="{{country}}">{{country}}</option>
+		{% endfor %}
+   </select>
+   <input class="btn" type="submit" value="submit" name="submit">
+</form>
+    <div id="chart" class="chart" >
+    </div>
+	
+ 
+</body> 
+    <script type="text/javascript">
+        var graphs = {{graphJSON | safe}};
+        Plotly.plot('chart',graphs);
+    </script>
+</body>
+</html>
