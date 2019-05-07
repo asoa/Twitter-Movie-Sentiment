@@ -37,7 +37,7 @@ class TwitterPremiumQuery:
             # self.write_stream()
 
     def authenticate(self):
-        """ authenticate using the searchtweets api with yaml configs from twitter_keys.yaml """
+        """ authenticate using either the sandbox or premium api with yaml configs from twitter_keys.yaml """
         if self.do_sandbox:
             self.premium_search_args = load_credentials(filename=self.cred_file,
                                                         yaml_key='full_tweets_api_sandbox', env_overwrite=False)

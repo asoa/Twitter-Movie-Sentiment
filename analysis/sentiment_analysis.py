@@ -19,7 +19,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.decomposition import PCA
 import nltk
 import string
-from contextlib import ExitStack
 import re
 import numpy as np
 import pickle
@@ -34,25 +33,41 @@ class SA:
         self.db_name = self.kwargs.get('db_name', 'tweets')
         self.coll_name = self.kwargs.get('coll_name')
         self.tweet_files_path = self.kwargs.get('tweet_files_path')
+        self.root_path = self.kwargs.get('root_path')
         self.tweets = None
         self.s = Stream(db_name=self.db_name, coll_name=self.coll_name)  # use some of Stream methods
         self.stopwords = nltk.corpus.stopwords.words('english')
         self.combined_array = None
         self.words = []
 
+        if self.kwargs.get('train'):
+            self.pprocess_induction()
+            self.naive_bayes()
+
+        if not self.kwargs.get('train') and not self.kwargs.get('vader', False):
+            self.pprocess_induction()
+            self.get_tweets()
+            # array = t.pprocess_predict(string='cpt marvel was a really good movie')
+            array = self.pprocess_predict()
+            self.naive_bayes(array)
+            self.write_json(f_name=os.path.join(self.kwargs.get('root_path'), 'output', 'nb_results.json'))
+
         if self.kwargs.get('vader'):
             self.get_tweets()
-            self.vader_sa()
+            # self.vader_sa()
 
     def get_tweets(self):
+        # os.chdir(self.kwargs.get('tweet_files_path'))
         for file in os.listdir(self.tweet_files_path):
             if file.endswith('.json'):
                 with open(os.path.join(self.kwargs.get('tweet_files_path'),file), 'r') as f:
                     self.json_objects = (json.loads(tweet) for tweet in f.readlines())
-                # self.tweets = ({'text': tweet['text'], 'place': tweet['place']['full_name'], 'sentiment': self.vader_sa(tweet['text'])} for tweet in json_objects if tweet.get('place') is not None)
-                # self.tweets = ({'text': tweet['text'], 'sentiment': self.vader_sa(tweet['text'])} for tweet in json_objects)
-                # self.write_json(f_name=file)
-                self.tweets = [tweet for tweet in self.json_objects]
+                if self.kwargs.get('vader'):
+                    self.tweets = [{'text': tweet['text'], 'place': tweet['place'], 'sentiment': self.vader_sa(tweet['text'])} for tweet in self.json_objects if tweet.get('place') is not None]
+                    # self.tweets = [{'text': tweet['text'], 'sentiment': self.vader_sa(tweet['text'])} for tweet in self.json_objects]
+                    self.write_json(f_name=os.path.join(self.kwargs.get('root_path'), 'output', 'vader_class_results.json'))
+                else:
+                    self.tweets = [tweet for tweet in self.json_objects]
         return self.tweets
 
     def clean_movie_reviews(self, doc):
@@ -166,7 +181,7 @@ class SA:
         else:
             tfidf_vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1,2), stop_words='english', smooth_idf=True, vocabulary=self.c_vocab)
         # with ExitStack() as stack:
-        #     path = '/Users/asoa/PycharmProjects/688/final_project/movie_sentiment/test_dir'
+        #     path = '/Users/asoa/PycharmProjects/688/final_project/movie_sentiment/tweet_dir'
         if string:
             tweets = [self.clean_tweets(string).lower()]
         else:
@@ -180,41 +195,46 @@ class SA:
         return tweet_array
         # print(tfidf_vectorizer.get_feature_names()[:100])
 
-    def vader_sa(self, string=None):
+    def vader_sa(self, text):
         sa = SentimentIntensityAnalyzer()
-        if string is None:
-
-
-            tweets = [self.clean_tweets(tweet) for tweet in self.tweets]
-        else:
-            tweets = string
-        for tweet in tweets:
-            sentiment = None
-            score = sa.polarity_scores(tweet)
-            pos = score['pos']
-            neg = score['neg']
-            neu = score['neu']
-            cmp = score['compound']
-            if cmp >= 0.05:  # positive
-                # return 0
-                sentiment = 0
-            elif (cmp < 0.05) and (cmp > -0.05):  # neutral
-                sentiment = 2
-                # return 2
-            else:  # negative
-                sentiment = 1
-            print(f"{tweet}: {sentiment}")
+        # if string is None:
+        #     # tweets = [self.clean_tweets(tweet) for tweet in self.tweets]
+        #     pass
+        # else:
+        #     tweets = string
+        # for tweet in tweets:
+        sentiment = None
+        score = sa.polarity_scores(text)
+        pos = score['pos']
+        neg = score['neg']
+        neu = score['neu']
+        cmp = score['compound']
+        if cmp >= 0.05:  # positive
+            sentiment = 0
+            if self.kwargs.get('debug'):
+                print(f"{text}: {sentiment}")
+            return 0
+        elif (cmp < 0.05) and (cmp > -0.05):  # neutral
+            sentiment = 2
+            if self.kwargs.get('debug'):
+                print(f"{text}: {sentiment}")
+            return 2
+        else:  # negative
+            sentiment = 1
+            if self.kwargs.get('debug'):
+                print(f"{text}: {sentiment}")
+            return 1
             # print({'text': tweet['text'], 'place': tweet['place']['name'], 'sentiment': self.pred[sentiment]})
 
     def naive_bayes(self, array=None):
         if array is not None:
-            path = os.path.join(os.getcwd(), 'nb_model.pkl')
+            path = os.path.join(self.kwargs.get('root_path'), 'analysis', 'nb_model.pkl')
             with open(path, 'rb') as f:
                 cls = pickle.load(f)
 
-            # self.pred = cls.predict(array)
-            self.pred = cls.predict_proba(array)
-            print(self.pred)
+            self.pred = cls.predict(array)
+            # self.pred = cls.predict_proba(array)
+            # print(self.pred)
             # with open('pred_results.txt', 'w') as f:
             #     [f.write(str(p)+'\n') for p in pred]
         else:
@@ -223,11 +243,11 @@ class SA:
             x_train, x_test, y_train, y_test = train_test_split(X, Y, train_size=0.8, test_size=0.2, random_state=155)
             clf = MultinomialNB(alpha=1)
             clf.fit(x_train, y_train)
-            # self.pred = clf.predict(x_test)
-            self.pred = clf.predict_proba(x_test)
-            # print(classification_report(y_test, pred, target_names=['pos','neg']))
+            self.pred = clf.predict(x_test)
+            # self.pred = clf.predict_proba(x_test)
+            print(classification_report(y_test, self.pred, target_names=['pos','neg']))
 
-            path = os.path.join(os.getcwd(), 'nb_model.pkl')
+            path = os.path.join(self.kwargs.get('root_path'), 'analysis', 'nb_model.pkl')
             with open(path, 'wb') as f:
                 print("***** writing model *****")
                 pickle.dump(clf, f)
@@ -255,69 +275,97 @@ class SA:
 
     def write_json(self, f_name=None):
         """ write tweet to json file """
-        "\n***** writing json *****"
+        print("\n***** writing json *****")
         city_rating = defaultdict(lambda: defaultdict(lambda: 0))
 
         # use for debugging classification results
         i = 0
-        if self.kwargs.get('debug'):
-            for tweet in self.words:
-                print(f"{tweet}: {self.pred[i]}")
+        if self.kwargs.get('debug') and not self.kwargs.get('vader'):
+            for tweet in self.tweets:
+                print(f"{tweet['text']}: {self.pred[i]}")
                 i+=1
-            return
 
         # build city rating dict
         j = 0
-        for tweet in self.tweets:
-            if tweet.get('place') is not None:
-                try:
+        if self.kwargs.get('vader', False):
+            for tweet in self.tweets:
+                if tweet.get('place') is not None:
                     t = {'text': tweet['text'], 'place': tweet['place']['full_name'],
-                         'sentiment': '{}'.format(self.pred[j])}
+                         'sentiment': '{}'.format(tweet['sentiment'])}
                     name = tweet['place']['name']
-                    if name not in city_rating.keys() and int(self.pred[j]) == 0:
+                    if name not in city_rating.keys() and int(tweet['sentiment']) == 0:
                         city_rating[name]['pos'] = 1
-                    elif name not in city_rating.keys() and int(self.pred[j]) == 1:
+                    elif name not in city_rating.keys() and int(tweet['sentiment']) == 1:
                         city_rating[name]['neg'] = 1
-                    elif name in city_rating.keys() and int(self.pred[j]) == 0:
+                    elif name not in city_rating.keys() and int(tweet['sentiment']) == 2:
+                        city_rating[name]['neu'] = 1
+                    elif name in city_rating.keys() and int(tweet['sentiment']) == 0:
                         city_rating[name]['pos'] += 1
-                    else:
+                    elif name in city_rating.keys() and int(tweet['sentiment']) == 1:
                         city_rating[name]['neg'] += 1
-                except Exception:
-                    print(traceback.format_exc())
-            else:
+                    else:
+                        city_rating[name]['neu'] += 1
+
+        else:
+            for tweet in self.tweets:
+                if tweet.get('place') is not None:
+                    try:
+                        t = {'text': tweet['text'], 'place': tweet['place']['full_name'],
+                             'sentiment': '{}'.format(self.pred[j])}
+                        name = tweet['place']['name']
+                        if name not in city_rating.keys() and int(self.pred[j]) == 0:
+                            city_rating[name]['pos'] = 1
+                        elif name not in city_rating.keys() and int(self.pred[j]) == 1:
+                            city_rating[name]['neg'] = 1
+                        elif name in city_rating.keys() and int(self.pred[j]) == 0:
+                            city_rating[name]['pos'] += 1
+                        else:
+                            city_rating[name]['neg'] += 1
+                    except Exception:
+                        print(traceback.format_exc())
+                else:
+                    j+=1
+                    continue
                 j+=1
-                continue
-            j+=1
 
         # write city rating to file
+        # with open(os.path.join(self.kwargs.get('root_path'), 'output', f_name), 'w') as f:
         with open(f_name, 'w') as f:
             f.write(json.dumps(city_rating) + '\n')
             # write tweets to same file
             j = 0
-            for tweet in self.tweets:
-                if tweet.get('place') is not None:
-                    d = {'text': tweet['text'], 'place': tweet['place']['name'], 'sentiment': self.pred[j]}
-                    f.write(json.dumps(d) + '\n')
-                    j += 1
 
+            # write sentiment results for naive bayes classification
+            if not self.kwargs.get('vader'):
+                for tweet in self.tweets:
+                    if tweet.get('place'):
+                        d = {'text': tweet['text'], 'place': tweet['place']['name'], 'sentiment': self.pred[j]}
+                        # if self.kwargs.get('debug'):
+                        #     print('{}: {}'.format(d['text'],d[self.pred[j]]))
+                        f.write(json.dumps(d) + '\n')
+                        j += 1
+            # write sentiment results for vader
+            else:
+                print('writing vader results')
+                for tweet in self.tweets:
+                    d = {'text': tweet['text'], 'place': tweet['place']['name'], 'sentiment': tweet['sentiment']}
+                    f.write(json.dumps(d) + '\n')
 
 def main():
+    ROOT_PATH = os.path.realpath('..')
+    TWEET_FILE_PATH = os.path.join(ROOT_PATH, 'tweet_dir')
+
     # train model
+    # t = SA(train=True, root_path=ROOT_PATH, stopwords=False, debug=False)
 
-    # t = SA(train=True, stopwords=False, debug=False)
-    # t.pprocess_induction()
-    # t.naive_bayes()
+    # predict tweets using Naive Bayes Model
+    t = SA(tweet_files_path=TWEET_FILE_PATH, root_path=ROOT_PATH, train=False, debug=True, stopwords=False)
 
-    # predict tweets
+    # predict tweets using Vader for debugging only
+    # t = SA(root_path=ROOT_PATH, vader=True, debug=True, tweet_files_path=TWEET_FILE_PATH)
 
-    file_path = '<path_to_tweets>'
-    t = SA(tweet_files_path=file_path, train=False, debug=True, stopwords=False)
-    t.pprocess_induction()
-    t.get_tweets()
-    # array = t.pprocess_predict(string='cpt marvel was a really good movie')
-    array = t.pprocess_predict()
-    t.naive_bayes(array)
-    t.write_json('classification_results.txt')
+    # predict tweets using Vader no debugging
+    # t = SA(root_path=ROOT_PATH, vader=True, debug=False, tweet_files_path=TWEET_FILE_PATH)
 
 
 if __name__ == "__main__":
