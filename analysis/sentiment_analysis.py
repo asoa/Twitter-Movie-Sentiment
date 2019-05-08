@@ -59,13 +59,14 @@ class SA:
     def get_tweets(self):
         # os.chdir(self.kwargs.get('tweet_files_path'))
         for file in os.listdir(self.tweet_files_path):
+            f_name = os.path.basename(file)
             if file.endswith('.json'):
                 with open(os.path.join(self.kwargs.get('tweet_files_path'),file), 'r') as f:
                     self.json_objects = (json.loads(tweet) for tweet in f.readlines())
                 if self.kwargs.get('vader'):
                     self.tweets = [{'text': tweet['text'], 'place': tweet['place'], 'sentiment': self.vader_sa(tweet['text'])} for tweet in self.json_objects if tweet.get('place') is not None]
                     # self.tweets = [{'text': tweet['text'], 'sentiment': self.vader_sa(tweet['text'])} for tweet in self.json_objects]
-                    self.write_json(f_name=os.path.join(self.kwargs.get('root_path'), 'output', 'vader_class_results.json'))
+                    self.write_json(f_name=os.path.join(self.kwargs.get('root_path'), 'output', 'vader_{}'.format(f_name)))
                 else:
                     self.tweets = [tweet for tweet in self.json_objects]
         return self.tweets

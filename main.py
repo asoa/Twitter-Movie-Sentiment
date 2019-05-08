@@ -18,7 +18,7 @@ def main():
     # t = SA(root_path=ROOT_PATH, vader=True, debug=True, tweet_files_path=TWEET_FILE_PATH)
 
     # 4. predict tweets using Vader no debugging
-    # t = SA(root_path=ROOT_PATH, vader=True, debug=False, tweet_files_path=TWEET_FILE_PATH)
+    t = SA(root_path=ROOT_PATH, vader=True, debug=False, tweet_files_path=TWEET_FILE_PATH)
 
 
 if __name__ == "__main__":

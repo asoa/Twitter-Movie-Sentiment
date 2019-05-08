@@ -2,6 +2,7 @@
 import codecs
 import re
 import json
+import os
 
 
 def count_string(string, text):
@@ -28,3 +29,34 @@ def write_ndjson(filename, data_iterable, append=False, **kwargs):
         for item in data_iterable:
             outfile.write(json.dumps(item) + "\n")
             yield item
+
+
+def weekly_summary():
+    ROOT_PATH = os.path.realpath('..')
+    files = os.listdir(os.path.join(ROOT_PATH, 'output'))
+    for file in files:
+        pos = 0
+        neg = 0
+        neu = 0
+        with open(os.path.join(ROOT_PATH,'output',file), 'r') as f:
+            sentiment_summary = json.loads(f.readlines()[0])
+        for k,v in sentiment_summary.items():
+            if 'pos' in v.keys():
+                pos += v.get('pos')
+            if 'neg' in v.keys():
+                neg += v.get('neg')
+            if 'neu' in v.keys():
+                neu += v.get('neu')
+        fmt = '{}\n' \
+              'Positive: {}\n' \
+              'Negative: {}\n' \
+              'Neutral: {}\n'
+        print(fmt.format(file, pos, neg, neu))
+
+
+def main():
+    weekly_summary()
+
+
+if __name__ == "__main__":
+    main()

@@ -24,6 +24,7 @@ class ModelComparison:
 
         self.labels = np.zeros(4000)
         self.labels[2000:] = 1
+        random.seed(155)
         pos_files = random.sample(os.listdir('benchmark/pos'), 2000)
         neg_files = random.sample(os.listdir('benchmark/neg'), 2000)
 
