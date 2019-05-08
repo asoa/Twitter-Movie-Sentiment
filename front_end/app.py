@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, render_template, request
 import plotly
-plotly.tools.set_credentials_file(username='<change_me>', api_key='<change_me>')
+plotly.tools.set_credentials_file(username='abhati01', api_key='dbYmCxlRtPhX1MnoCsv7')
 import plotly.plotly as py
 import plotly.graph_objs as go
 import numpy as np
