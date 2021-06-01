@@ -10,4 +10,4 @@ requests-oauthlib==1.2.0
 searchtweets==1.7.4
 tweet-parser==1.13.2
 twitter==1.18.0
-urllib3==1.24.1
+urllib3==1.26.5
